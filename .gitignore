@@ -1,0 +1,19 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+**/build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Kotlin 및 작업 도구 생성물
+.kotlin/
+.omo/
+.omc/
+.senpi/
+
+# 사용자 개인 사진
+my_photos/
