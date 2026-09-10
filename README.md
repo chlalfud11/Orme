@@ -66,7 +66,6 @@ Orme는 여행 기록이 여러 앱과 사진첩에 흩어지는 문제를 해�
 | 에뮬레이터 이름 | AVD ID | Android / SDK | 이미지 |
 | --- | --- | --- | --- |
 | Pixel 8 | `Pixel_8` | Android 15 / API 35 | Google Play, arm64-v8a |
-| Medium Phone | `Medium_Phone` | Android 15 / API 35 | Google Play, arm64-v8a |
 
 에뮬레이터의 테스트 SDK는 API 35이고, 프로젝트를 빌드하는 compileSdk와
 targetSdk는 37입니다. 팀원의 에뮬레이터 이름은 달라도 API 26 이상의
