@@ -76,7 +76,7 @@ public final class LoginScreen extends FrameLayout {
 
         TextView title = ViewUtils.playfair(context, "Login", colors.primary, 56, Gravity.LEFT);
         title.setIncludeFontPadding(false);
-        title.setTextScaleX(1.30f);
+        title.setTextScaleX(1.50f);
         title.setTypeface(AppTypography.playfair(context), Typeface.BOLD);
         FrameLayout.LayoutParams titleParams = new FrameLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT,
