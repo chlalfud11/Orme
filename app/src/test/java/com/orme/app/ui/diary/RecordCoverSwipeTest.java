@@ -22,9 +22,9 @@ public final class RecordCoverSwipeTest {
 
     @Test
     public void centeredRecordGetsLargerThanARecordOneCardAway() {
-        assertEquals(1.14f, RegionDiaryFlow.recordScaleForDistance(0f, 100f), 0.001f);
-        assertEquals(1.04f, RegionDiaryFlow.recordScaleForDistance(50f, 100f), 0.001f);
-        assertEquals(0.94f, RegionDiaryFlow.recordScaleForDistance(100f, 100f), 0.001f);
+        assertEquals(1.24f, RegionDiaryFlow.recordScaleForDistance(0f, 100f), 0.001f);
+        assertEquals(1.12f, RegionDiaryFlow.recordScaleForDistance(50f, 100f), 0.001f);
+        assertEquals(1.00f, RegionDiaryFlow.recordScaleForDistance(100f, 100f), 0.001f);
     }
 
     @Test

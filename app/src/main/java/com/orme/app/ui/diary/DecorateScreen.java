@@ -123,21 +123,13 @@ public final class DecorateScreen extends FrameLayout {
         pageParams.bottomMargin = ViewUtils.dp(context, 86);
         addView(pageCanvas, pageParams);
 
-        ImageButton back = new ImageButton(context);
-        back.setImageResource(R.drawable.ic_back);
-        back.setColorFilter(AppColors.GREEN);
-        back.setBackgroundColor(Color.TRANSPARENT);
-        back.setPadding(0, 0, 0, 0);
-        back.setContentDescription("뒤로");
-        back.setOnClickListener(onBack);
-        FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(
-                ViewUtils.dp(context, 40),
-                ViewUtils.dp(context, 54),
-                Gravity.BOTTOM | Gravity.LEFT
+        ImageButton back = ViewUtils.backButton(
+                context,
+                R.drawable.ic_back,
+                navigator.colors().primary,
+                onBack
         );
-        backParams.leftMargin = ViewUtils.dp(context, 11);
-        backParams.bottomMargin = ViewUtils.dp(context, 28);
-        addView(back, backParams);
+        addView(back, ViewUtils.backButtonParams(context));
     }
 
     private LinearLayout.LayoutParams toolParams(Context context) {

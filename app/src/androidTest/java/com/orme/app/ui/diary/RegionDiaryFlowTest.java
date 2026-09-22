@@ -14,12 +14,14 @@ import androidx.test.core.app.ActivityScenario;
 
 import com.orme.app.MainActivity;
 import com.orme.app.navigation.AppNavigator;
+import com.orme.app.ui.components.ViewUtils;
 import com.orme.app.ui.map.MapRegion;
 
 import org.junit.Test;
 
 import java.util.Collections;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /** 기록물 확인 화면의 상단 뒤로가기 버튼 상호작용을 검증한다. */
@@ -75,6 +77,12 @@ public final class RegionDiaryFlowTest {
                     );
                     ImageButton back = (ImageButton) flow.getChildAt(flow.getChildCount() - 1);
                     assertTrue(back.isClickable());
+                    FrameLayout.LayoutParams backParams =
+                            (FrameLayout.LayoutParams) back.getLayoutParams();
+                    assertEquals(ViewUtils.dp(activity, 34), backParams.width);
+                    assertEquals(ViewUtils.dp(activity, 34), backParams.height);
+                    assertEquals(ViewUtils.dp(activity, 20), backParams.leftMargin);
+                    assertEquals(ViewUtils.dp(activity, 64), backParams.topMargin);
                     back.performClick();
                     assertTrue(flow.getChildAt(0) instanceof HorizontalScrollView);
                 } finally {

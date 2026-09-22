@@ -130,9 +130,10 @@ public final class RegionDiaryFlow extends FrameLayout {
         AppColors.Palette colors = navigator.colors();
         List<DiaryRecord> records = DiaryStore.listRecords(context, region.code);
 
-        ImageButton back = icon(context, R.drawable.ic_back, "뒤로");
+        ImageButton back = ViewUtils.backButton(context, R.drawable.ic_back,
+                colors.primary, onClose);
         back.setOnClickListener(onClose);
-        addTop(back, Gravity.LEFT, 24, 91, 30, 30);
+        addView(back, ViewUtils.backButtonParams(context));
 
         boolean hasRepresentativePhoto = PhotoStore.hasPhoto(context, region.code);
         ImageButton photoButton = icon(
@@ -170,7 +171,7 @@ public final class RegionDiaryFlow extends FrameLayout {
             LinearLayout list = new LinearLayout(context);
             list.setOrientation(LinearLayout.HORIZONTAL);
             int cardWidth = ViewUtils.dp(context, 210);
-            int cardHeight = ViewUtils.dp(context, 294);
+            int cardHeight = coverHeightForWidth(cardWidth);
             int horizontalInset = Math.max(
                     ViewUtils.dp(context, 16),
                     (getResources().getDisplayMetrics().widthPixels - cardWidth) / 2
@@ -265,6 +266,7 @@ public final class RegionDiaryFlow extends FrameLayout {
         EditText input = new EditText(context);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        ViewUtils.enableKoreanInput(input);
         input.setHint("예: 제주도 여행");
         input.setContentDescription("기록물 이름");
         AlertDialog dialog = new AlertDialog.Builder(context)
@@ -304,7 +306,7 @@ public final class RegionDiaryFlow extends FrameLayout {
         ImageButton back = addBackButton(context, v -> {
             screen = Screen.LIST;
             render();
-        }, true);
+        });
 
         ScrollView scroll = new ScrollView(context);
         GridLayout grid = new GridLayout(context);
@@ -347,7 +349,7 @@ public final class RegionDiaryFlow extends FrameLayout {
         ImageButton back = addBackButton(context, v -> {
             screen = Screen.COVER_PICK;
             render();
-        }, true);
+        });
 
         ScrollView scroll = new ScrollView(context);
         GridLayout grid = new GridLayout(context);
@@ -417,7 +419,7 @@ public final class RegionDiaryFlow extends FrameLayout {
         ImageButton back = addBackButton(context, v -> {
             screen = Screen.LIST;
             render();
-        }, false);
+        });
         if (selectedRecord == null) {
             return;
         }
@@ -468,12 +470,15 @@ public final class RegionDiaryFlow extends FrameLayout {
 
     private ImageButton addBackButton(
             Context context,
-            View.OnClickListener listener,
-            boolean right
+            View.OnClickListener listener
     ) {
-        ImageButton back = icon(context, R.drawable.ic_back, "뒤로");
-        back.setOnClickListener(listener);
-        addTop(back, right ? Gravity.RIGHT : Gravity.LEFT, 12, 64, 30, 30);
+        ImageButton back = ViewUtils.backButton(
+                context,
+                R.drawable.ic_back,
+                navigator.colors().primary,
+                listener
+        );
+        addView(back, ViewUtils.backButtonParams(context));
         return back;
     }
 
@@ -529,7 +534,7 @@ public final class RegionDiaryFlow extends FrameLayout {
             setContentDescription(record.name + " 기록 열기");
             setOnClickListener(v -> open.run());
             ImageView cover = new ImageView(context);
-            cover.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            cover.setScaleType(ImageView.ScaleType.FIT_XY);
             if (record.coverPath != null) {
                 cover.setImageBitmap(DiaryStore.loadBitmap(record.coverPath));
             }
@@ -607,10 +612,14 @@ public final class RegionDiaryFlow extends FrameLayout {
 
     static float recordScaleForDistance(float distance, float focusDistance) {
         if (focusDistance <= 0f) {
-            return 1.14f;
+            return 1.24f;
         }
         float clampedDistance = Math.max(0f, Math.min(distance, focusDistance));
-        return 1.14f - 0.20f * (clampedDistance / focusDistance);
+        return 1.24f - 0.24f * (clampedDistance / focusDistance);
+    }
+
+    static int coverHeightForWidth(int width) {
+        return Math.max(1, Math.round(width * 1000f / 720f));
     }
 
     static int recordScrollTarget(
