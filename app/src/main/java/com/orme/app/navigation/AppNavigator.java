@@ -113,6 +113,12 @@ public final class AppNavigator {
     }
 
     public void showProfile() {
+        if (currentView instanceof ProfileScreen) {
+            AppTheme.apply(activity, colors(), true);
+            ((ProfileScreen) currentView).refreshTheme();
+            AppTheme.hideSystemBars(activity);
+            return;
+        }
         showProfileBarsHidden(new ProfileScreen(activity, this));
     }
 
@@ -121,6 +127,10 @@ public final class AppNavigator {
     }
 
     public void show(View content) {
+        show(content, true);
+    }
+
+    private void show(View content, boolean systemBarsVisible) {
         root.removeAllViews();
         root.addView(content, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -128,7 +138,11 @@ public final class AppNavigator {
         ));
         currentView = content;
         AppTheme.apply(activity, colors(), true);
-        AppTheme.showSystemBars(activity);
+        if (systemBarsVisible) {
+            AppTheme.showSystemBars(activity);
+        } else {
+            AppTheme.hideSystemBars(activity);
+        }
     }
 
     public FrameLayout root() {
@@ -136,8 +150,7 @@ public final class AppNavigator {
     }
 
     public void showProfileBarsHidden(View content) {
-        show(content);
-        AppTheme.hideSystemBars(activity);
+        show(content, false);
     }
 
     public boolean onBackPressed() {

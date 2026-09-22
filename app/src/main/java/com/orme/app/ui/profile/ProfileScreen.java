@@ -20,25 +20,46 @@ import android.widget.TextView;
 
 import com.orme.app.R;
 import com.orme.app.navigation.AppNavigator;
+import com.orme.app.ui.components.AuthComponents;
 import com.orme.app.ui.components.ViewUtils;
 import com.orme.app.ui.map.PhotoStore;
 import com.orme.app.ui.theme.AppColors;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /** 프로필/환경설정 화면. */
 public final class ProfileScreen extends FrameLayout {
+    private final AppNavigator navigator;
+    private final ScrollView scroll;
+    private final List<TextView> primaryTextViews = new ArrayList<>();
+    private final List<TextView> mutedTextViews = new ArrayList<>();
+    private AppColors.Palette colors;
+    private ImageView photo;
+    private View profileFrame;
+    private ImageView profilePlaceholder;
+    private FrameLayout addButton;
+    private ImageView addIcon;
+    private TextView username;
+    private TextView darkText;
+    private DarkModeToggle darkSwitch;
+    private TextView logout;
+    private View bottomBar;
+
     public ProfileScreen(Context context, AppNavigator navigator) {
         super(context);
-        AppColors.Palette colors = navigator.colors();
+        this.navigator = navigator;
+        colors = navigator.colors();
         setBackgroundColor(colors.background);
 
-        ScrollView scroll = new ScrollView(context);
+        scroll = new ScrollView(context);
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         FrameLayout.LayoutParams scrollParams = new FrameLayout.LayoutParams(
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT
         );
-        scrollParams.bottomMargin = ViewUtils.dp(context, 84);
+        scrollParams.bottomMargin = AuthComponents.bottomContentInset(context);
         addView(scroll, scrollParams);
 
         LinearLayout content = new LinearLayout(context);
@@ -51,7 +72,7 @@ public final class ProfileScreen extends FrameLayout {
         ));
 
         FrameLayout profileBox = new FrameLayout(context);
-        ImageView photo = new ImageView(context);
+        photo = new ImageView(context);
         photo.setScaleType(ImageView.ScaleType.CENTER_CROP);
         photo.setClipToOutline(true);
         photo.setOutlineProvider(new ViewOutlineProvider() {
@@ -66,24 +87,24 @@ public final class ProfileScreen extends FrameLayout {
                 ViewUtils.dp(context, 140),
                 Gravity.CENTER
         ));
-        View profileFrame = new View(context);
+        profileFrame = new View(context);
         profileFrame.setBackground(profileFrame(context, colors));
         profileBox.addView(profileFrame, new FrameLayout.LayoutParams(
                 ViewUtils.dp(context, 140),
                 ViewUtils.dp(context, 140),
                 Gravity.CENTER
         ));
-        ImageView profile = new ImageView(context);
-        profile.setImageResource(R.drawable.ic_profile_placeholder);
-        profile.setColorFilter(AppColors.withAlpha(colors.muted, 107));
-        profile.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        profileBox.addView(profile, new FrameLayout.LayoutParams(
+        profilePlaceholder = new ImageView(context);
+        profilePlaceholder.setImageResource(R.drawable.ic_profile_placeholder);
+        profilePlaceholder.setColorFilter(AppColors.withAlpha(colors.muted, 107));
+        profilePlaceholder.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        profileBox.addView(profilePlaceholder, new FrameLayout.LayoutParams(
                 ViewUtils.dp(context, 76),
                 ViewUtils.dp(context, 76),
                 Gravity.CENTER
         ));
-        FrameLayout add = new FrameLayout(context);
-        add.setBackground(ViewUtils.rounded(colors.background, 14, context));
+        addButton = new FrameLayout(context);
+        addButton.setBackground(ViewUtils.rounded(colors.background, 14, context));
         FrameLayout.LayoutParams addParams = new FrameLayout.LayoutParams(
                 ViewUtils.dp(context, 28),
                 ViewUtils.dp(context, 28),
@@ -91,17 +112,17 @@ public final class ProfileScreen extends FrameLayout {
         );
         addParams.rightMargin = ViewUtils.dp(context, 16);
         addParams.topMargin = ViewUtils.dp(context, 17);
-        profileBox.addView(add, addParams);
-        ImageView addIcon = new ImageView(context);
+        profileBox.addView(addButton, addParams);
+        addIcon = new ImageView(context);
         addIcon.setImageResource(R.drawable.ic_profile_add);
         addIcon.setColorFilter(colors.background);
         addIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        add.addView(addIcon, new FrameLayout.LayoutParams(
+        addButton.addView(addIcon, new FrameLayout.LayoutParams(
                 ViewUtils.dp(context, 20),
                 ViewUtils.dp(context, 20),
                 Gravity.CENTER
         ));
-        add.setOnClickListener(v -> navigator.openImagePicker(uri -> {
+        addButton.setOnClickListener(v -> navigator.openImagePicker(uri -> {
             Bitmap bitmap = PhotoStore.decode(context, uri);
             if (bitmap != null) {
                 photo.setImageBitmap(bitmap);
@@ -114,27 +135,29 @@ public final class ProfileScreen extends FrameLayout {
         ));
         addSpace(content, context, 8);
 
-        TextView username = ViewUtils.playfair(context, "miryeong", colors.primary, 20,
+        username = ViewUtils.playfair(context, "miryeong", colors.primary, 20,
                 Gravity.CENTER);
+        primaryTextViews.add(username);
         content.addView(username, ViewUtils.linear(
                 LayoutParams.MATCH_PARENT,
                 ViewUtils.dp(context, 28)
         ));
         addSpace(content, context, 47);
 
-        addSection(content, context, "계정정보", colors.muted, 16, 47);
+        addSection(content, context, "계정정보", 16, 47);
         addRow(content, context, "내정보 관리", colors, true, null);
         addRow(content, context, "비밀번호 변경", colors, true, null);
         addSpace(content, context, 13);
-        addSection(content, context, "화면", colors.muted, 16, 47);
+        addSection(content, context, "화면", 16, 47);
         addRow(content, context, "언어", colors, true, null);
 
         LinearLayout darkRow = new LinearLayout(context);
         darkRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView darkText = ViewUtils.text(context, "다크모드", colors.primary, 18,
+        darkText = ViewUtils.text(context, "다크모드", colors.primary, 18,
                 Typeface.BOLD, Gravity.CENTER_VERTICAL);
+        primaryTextViews.add(darkText);
         darkRow.addView(darkText, ViewUtils.weight(1f));
-        DarkModeToggle darkSwitch = new DarkModeToggle(context, colors, navigator.isDarkMode());
+        darkSwitch = new DarkModeToggle(context, colors, navigator.isDarkMode());
         darkSwitch.setContentDescription("다크모드");
         darkSwitch.setOnClickListener(v -> {
             boolean checked = !darkSwitch.isChecked();
@@ -152,7 +175,7 @@ public final class ProfileScreen extends FrameLayout {
         ));
 
         addSpace(content, context, 10);
-        addSection(content, context, "정보", colors.muted, 16, 39);
+        addSection(content, context, "정보", 16, 39);
         addRow(content, context, "공지사항", colors, true, null);
         addRow(content, context, "앱 정보", colors, true, null);
         View weightSpace = new View(context);
@@ -162,35 +185,54 @@ public final class ProfileScreen extends FrameLayout {
                 1f
         ));
 
-        TextView logout = ViewUtils.clickableText(context, "로그아웃", colors.muted, 12,
-                v -> showLogoutDialog(context, navigator, colors));
+        logout = ViewUtils.clickableText(context, "로그아웃", colors.muted, 12,
+                v -> showLogoutDialog(context, navigator, this.colors));
         logout.setPaintFlags(logout.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
         logout.setGravity(Gravity.CENTER);
         logout.setPadding(0, 0, 0, ViewUtils.dp(context, 24));
+        mutedTextViews.add(logout);
         content.addView(logout, ViewUtils.linear(
                 LayoutParams.MATCH_PARENT,
                 ViewUtils.dp(context, 48)
         ));
 
-        addView(navigator.bottomBar(), new FrameLayout.LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                ViewUtils.dp(context, 84),
-                Gravity.BOTTOM
-        ));
+        bottomBar = navigator.bottomBar();
+        addView(bottomBar, AuthComponents.bottomBarParams(context));
     }
 
-    private static void addSection(LinearLayout parent, Context context, String label,
-                                   int color, float size, int heightDp) {
-        TextView section = ViewUtils.text(context, label, color, size,
+    public void refreshTheme() {
+        colors = navigator.colors();
+        setBackgroundColor(colors.background);
+        profileFrame.setBackground(profileFrame(getContext(), colors));
+        profilePlaceholder.setColorFilter(AppColors.withAlpha(colors.muted, 107));
+        addButton.setBackground(ViewUtils.rounded(colors.background, 14, getContext()));
+        addIcon.setColorFilter(colors.background);
+        for (TextView text : primaryTextViews) {
+            text.setTextColor(colors.primary);
+        }
+        for (TextView text : mutedTextViews) {
+            text.setTextColor(colors.muted);
+        }
+        darkSwitch.setColors(colors);
+        darkSwitch.setChecked(navigator.isDarkMode());
+        removeView(bottomBar);
+        bottomBar = navigator.bottomBar();
+        addView(bottomBar, AuthComponents.bottomBarParams(getContext()));
+    }
+
+    private void addSection(LinearLayout parent, Context context, String label,
+                            float size, int heightDp) {
+        TextView section = ViewUtils.text(context, label, colors.muted, size,
                 Typeface.NORMAL, Gravity.LEFT | Gravity.TOP);
         section.setPadding(0, ViewUtils.dp(context, 5), 0, 0);
+        mutedTextViews.add(section);
         parent.addView(section, ViewUtils.linear(
                 LayoutParams.MATCH_PARENT,
                 ViewUtils.dp(context, heightDp)
         ));
     }
 
-    private static void addRow(
+    private void addRow(
             LinearLayout parent,
             Context context,
             String label,
@@ -202,10 +244,12 @@ public final class ProfileScreen extends FrameLayout {
         row.setGravity(Gravity.CENTER_VERTICAL);
         TextView text = ViewUtils.text(context, label, colors.primary, 18,
                 Typeface.BOLD, Gravity.CENTER_VERTICAL);
+        primaryTextViews.add(text);
         row.addView(text, ViewUtils.weight(1f));
         if (chevron) {
             TextView arrow = ViewUtils.text(context, "›", colors.muted, 30,
                     Typeface.NORMAL, Gravity.CENTER);
+            mutedTextViews.add(arrow);
             row.addView(arrow, ViewUtils.linear(ViewUtils.dp(context, 10), ViewUtils.dp(context, 45)));
         }
         if (listener != null) {
@@ -252,7 +296,7 @@ public final class ProfileScreen extends FrameLayout {
     }
 
     private static final class DarkModeToggle extends View {
-        private final AppColors.Palette colors;
+        private AppColors.Palette colors;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private boolean checked;
 
@@ -269,6 +313,11 @@ public final class ProfileScreen extends FrameLayout {
 
         void setChecked(boolean checked) {
             this.checked = checked;
+            invalidate();
+        }
+
+        void setColors(AppColors.Palette colors) {
+            this.colors = colors;
             invalidate();
         }
 
