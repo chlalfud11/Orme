@@ -10,6 +10,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.orme.app.navigation.AppNavigator;
+import com.orme.app.ui.components.AuthComponents;
 import com.orme.app.ui.components.ViewUtils;
 import com.orme.app.ui.theme.AppColors;
 
@@ -19,10 +20,13 @@ import java.util.List;
 
 /** 저장한 여행지를 보여주는 화면. */
 public final class FavoritesScreen extends FrameLayout {
-    static List<TravelSearchScreen.Destination> favoriteDestinations(Set<String> favoriteNames) {
-        List<TravelSearchScreen.Destination> result = new ArrayList<>();
-        for (TravelSearchScreen.Destination destination : TravelSearchScreen.ALL_DESTINATIONS) {
-            if (favoriteNames.contains(destination.name)) {
+    static List<RegionCatalog.Entry> favoriteDestinations(
+            List<RegionCatalog.Entry> catalog,
+            Set<String> favoriteCodes
+    ) {
+        List<RegionCatalog.Entry> result = new ArrayList<>();
+        for (RegionCatalog.Entry destination : catalog) {
+            if (favoriteCodes.contains(destination.code)) {
                 result.add(destination);
             }
         }
@@ -40,7 +44,7 @@ public final class FavoritesScreen extends FrameLayout {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT
         );
-        scrollParams.bottomMargin = ViewUtils.dp(context, 84);
+        scrollParams.bottomMargin = AuthComponents.bottomContentInset(context);
         addView(scroll, scrollParams);
 
         LinearLayout content = new LinearLayout(context);
@@ -60,7 +64,10 @@ public final class FavoritesScreen extends FrameLayout {
                 ViewUtils.dp(context, 54)
         ));
 
-        List<TravelSearchScreen.Destination> favorites = favoriteDestinations(navigator.favorites());
+        List<RegionCatalog.Entry> favorites = favoriteDestinations(
+                RegionCatalog.load(context),
+                navigator.favorites()
+        );
         if (favorites.isEmpty()) {
             TextView empty = ViewUtils.text(context, "저장한 여행지가 없습니다", colors.muted, 15,
                     Typeface.NORMAL, Gravity.LEFT | Gravity.CENTER_VERTICAL);
@@ -73,7 +80,7 @@ public final class FavoritesScreen extends FrameLayout {
         } else {
             for (int i = 0; i < favorites.size(); i++) {
                 TravelSearchScreen.TravelCard item = new TravelSearchScreen.TravelCard(
-                        context, favorites.get(i), navigator);
+                        context, favorites.get(i), navigator, "");
                 LinearLayout.LayoutParams itemParams = ViewUtils.linear(
                         LayoutParams.MATCH_PARENT,
                         ViewUtils.dp(context, 270)
@@ -85,10 +92,7 @@ public final class FavoritesScreen extends FrameLayout {
             }
         }
 
-        addView(navigator.bottomBar(), new FrameLayout.LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                ViewUtils.dp(context, 84),
-                Gravity.BOTTOM
-        ));
+        View bottomBar = navigator.bottomBar();
+        addView(bottomBar, AuthComponents.bottomBarParams(context));
     }
 }
