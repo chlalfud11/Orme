@@ -27,15 +27,14 @@ import android.widget.Toast;
 
 import com.orme.app.R;
 import com.orme.app.navigation.AppNavigator;
+import com.orme.app.ui.components.AuthComponents;
 import com.orme.app.ui.components.ViewUtils;
 import com.orme.app.ui.diary.RegionDiaryFlow;
 import com.orme.app.ui.theme.AppColors;
 import com.orme.app.ui.theme.AppTheme;
 import com.orme.app.ui.theme.AppTypography;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -73,7 +72,7 @@ public final class MapScreen extends FrameLayout {
                 LayoutParams.MATCH_PARENT
         );
         mapParams.topMargin = ViewUtils.dp(context, 50);
-        mapParams.bottomMargin = ViewUtils.dp(context, 84);
+        mapParams.bottomMargin = AuthComponents.bottomContentInset(context);
         addView(mapView, mapParams);
 
         regionButton = ViewUtils.text(context, "Region  ▼", AppColors.CREAM, 15,
@@ -104,25 +103,18 @@ public final class MapScreen extends FrameLayout {
         regionParams.rightMargin = ViewUtils.dp(context, 20);
         addView(regionButton, regionParams);
 
-        ImageButton back = iconButton(context, R.drawable.ic_back, "뒤로");
-        back.setVisibility(INVISIBLE);
-        back.setOnClickListener(v -> showProvinces());
-        FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(
-                ViewUtils.dp(context, 34),
-                ViewUtils.dp(context, 34),
-                Gravity.TOP | Gravity.LEFT
+        ImageButton back = ViewUtils.backButton(
+                context,
+                R.drawable.ic_back,
+                colors.primary,
+                v -> showProvinces()
         );
-        backParams.leftMargin = ViewUtils.dp(context, 20);
-        backParams.topMargin = ViewUtils.dp(context, 104);
-        addView(back, backParams);
+        back.setVisibility(INVISIBLE);
+        addView(back, ViewUtils.backButtonParams(context));
         mapView.setBackButton(back);
 
         bottomBar = navigator.bottomBar();
-        FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                ViewUtils.dp(context, 84),
-                Gravity.BOTTOM
-        );
+        FrameLayout.LayoutParams bottomParams = AuthComponents.bottomBarParams(context);
         addView(bottomBar, bottomParams);
         mapView.setOnRegionClick(this::onRegionClick);
         loadProvinces();
@@ -132,16 +124,6 @@ public final class MapScreen extends FrameLayout {
         GradientDrawable drawable = ViewUtils.rounded(colors.button, 14, context);
         drawable.setStroke(0, colors.button);
         return drawable;
-    }
-
-    private ImageButton iconButton(Context context, int drawable, String description) {
-        ImageButton button = new ImageButton(context);
-        button.setImageResource(drawable);
-        button.setColorFilter(colors.primary);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        button.setPadding(0, 0, 0, 0);
-        button.setContentDescription(description);
-        return button;
     }
 
     private void loadProvinces() {
@@ -232,7 +214,7 @@ public final class MapScreen extends FrameLayout {
                 ViewGroup.LayoutParams.WRAP_CONTENT
         ));
         for (MapRegion region : mapView.data().regions) {
-            TextView item = ViewUtils.text(context, region.name, colors.primary, 16,
+            TextView item = ViewUtils.text(context, region.name, colors.primary, 14,
                     android.graphics.Typeface.NORMAL, Gravity.LEFT | Gravity.CENTER_VERTICAL);
             item.setPadding(ViewUtils.dp(context, 12), 0, ViewUtils.dp(context, 8), 0);
             item.setClickable(true);
@@ -441,6 +423,9 @@ public final class MapScreen extends FrameLayout {
         private OnRegionClick listener;
         private float downX;
         private float downY;
+        private float lastX;
+        private float panX;
+        private boolean dragging;
 
         MapCanvasView(Context context) {
             super(context);
@@ -508,6 +493,8 @@ public final class MapScreen extends FrameLayout {
             this.index = index;
             this.photos = photos;
             this.completion = completion;
+            this.panX = 0f;
+            this.dragging = false;
             this.loading = false;
             this.touchEnabled = true;
             invalidate();
@@ -532,6 +519,7 @@ public final class MapScreen extends FrameLayout {
             canvas.save();
             canvas.translate(transform.offsetX, transform.offsetY);
             canvas.scale(transform.scale, transform.scale);
+            canvas.translate(-panX, 0f);
 
             float strokeWidth = (frameLevel == Level.SIGUNGU ? dp(1.1f) : dp(1.4f)) / transform.scale;
             if (frameLevel == Level.SIGUNGU) {
@@ -560,7 +548,10 @@ public final class MapScreen extends FrameLayout {
         private void drawSigungu(Canvas canvas, float strokeWidth) {
             strokePaint.setStrokeWidth(strokeWidth);
             strokePaint.setColor(colors.mapSigunguStroke);
-            for (MapRegion region : mainRegions()) {
+            for (MapRegion region : frameData.regions) {
+                if (region.inset) {
+                    continue;
+                }
                 Bitmap photo = photos.get(region.code);
                 if (photo != null) {
                     canvas.drawBitmap(photo, null, region.bounds, photoPaint);
@@ -569,9 +560,61 @@ public final class MapScreen extends FrameLayout {
                     canvas.drawPath(region.path, fillPaint);
                 }
             }
-            for (MapRegion region : mainRegions()) {
+            for (MapRegion region : frameData.regions) {
+                if (!region.inset) {
+                    continue;
+                }
+                Bitmap photo = photos.get(region.code);
+                if (photo != null) {
+                    drawInset(canvas, region, photo, null);
+                } else {
+                    fillPaint.setColor(colors.mapSigunguFill);
+                    drawInset(canvas, region, null, fillPaint);
+                }
+            }
+            for (MapRegion region : frameData.regions) {
+                if (region.inset) {
+                    continue;
+                }
                 canvas.drawPath(region.path, strokePaint);
             }
+            if (frameData.insetFrame != null && frameData.insetViewBoxWidth > 0f) {
+                strokePaint.setStrokeWidth(
+                        strokeWidth * frameData.insetViewBoxWidth / frameData.insetFrame.width()
+                );
+            }
+            for (MapRegion region : frameData.regions) {
+                if (region.inset) {
+                    drawInset(canvas, region, null, strokePaint);
+                }
+            }
+            strokePaint.setStrokeWidth(strokeWidth);
+        }
+
+        private void drawInset(
+                Canvas canvas,
+                MapRegion region,
+                Bitmap photo,
+                Paint fill
+        ) {
+            if (frameData.insetFrame == null
+                    || frameData.insetViewBoxWidth <= 0f
+                    || frameData.insetViewBoxHeight <= 0f) {
+                return;
+            }
+            RectF frame = frameData.insetFrame;
+            canvas.save();
+            canvas.translate(frame.left, frame.top);
+            canvas.scale(
+                    frame.width() / frameData.insetViewBoxWidth,
+                    frame.height() / frameData.insetViewBoxHeight
+            );
+            if (photo != null) {
+                canvas.drawBitmap(photo, null, region.bounds, photoPaint);
+            } else if (fill != null) {
+                canvas.drawPath(region.path, fill);
+            }
+            canvas.restore();
         }
 
         private void drawProvinces(Canvas canvas, float strokeWidth, float scale) {
@@ -624,16 +667,6 @@ public final class MapScreen extends FrameLayout {
             return null;
         }
 
-        private List<MapRegion> mainRegions() {
-            List<MapRegion> result = new ArrayList<>();
-            for (MapRegion region : frameData.regions) {
-                if (!region.inset) {
-                    result.add(region);
-                }
-            }
-            return result;
-        }
-
         private float dp(float value) {
             return ViewUtils.dp(getContext(), value);
         }
@@ -646,9 +679,39 @@ public final class MapScreen extends FrameLayout {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 downX = event.getX();
                 downY = event.getY();
+                lastX = downX;
+                dragging = false;
+                return true;
+            }
+            if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                float deltaX = event.getX() - downX;
+                float deltaY = event.getY() - downY;
+                if (!dragging
+                        && Math.abs(deltaX) > dp(8)
+                        && Math.abs(deltaX) > Math.abs(deltaY)) {
+                    dragging = true;
+                }
+                if (dragging) {
+                    MapTransform transform = MapTransform.fit(
+                            frameData.viewBoxWidth,
+                            frameData.viewBoxHeight,
+                            getWidth(),
+                            getHeight()
+                    );
+                    panX = Math.max(
+                            0f,
+                            Math.min(
+                                    maxPanX(),
+                                    panX - (event.getX() - lastX) / transform.scale
+                            )
+                    );
+                    lastX = event.getX();
+                    invalidate();
+                }
                 return true;
             }
             if (event.getAction() == MotionEvent.ACTION_UP
+                    && !dragging
                     && Math.abs(event.getX() - downX) < dp(16)
                     && Math.abs(event.getY() - downY) < dp(16)) {
                 MapTransform transform = MapTransform.fit(
@@ -657,10 +720,13 @@ public final class MapScreen extends FrameLayout {
                         getWidth(),
                         getHeight()
                 );
-                float x = transform.screenToViewX(event.getX());
+                float x = transform.screenToViewX(event.getX()) + panX;
                 float y = transform.screenToViewY(event.getY());
                 for (MapRegion region : frameData.regions) {
-                    if (!region.inset && region.contains(x, y)) {
+                    boolean hit = region.inset
+                            ? containsInset(region, x, y)
+                            : region.contains(x, y);
+                    if (hit) {
                         if (listener != null) {
                             listener.onClick(region);
                         }
@@ -670,6 +736,29 @@ public final class MapScreen extends FrameLayout {
                 return true;
             }
             return true;
+        }
+
+        private boolean containsInset(MapRegion region, float x, float y) {
+            RectF frame = frameData.insetFrame;
+            if (frame == null || frame.width() <= 0f || frame.height() <= 0f) {
+                return false;
+            }
+            float insetX = (x - frame.left) / frame.width() * frameData.insetViewBoxWidth;
+            float insetY = (y - frame.top) / frame.height() * frameData.insetViewBoxHeight;
+            return region.contains(insetX, insetY);
+        }
+
+        private float maxPanX() {
+            float right = frameData.viewBoxWidth;
+            for (MapRegion region : frameData.regions) {
+                if (!region.inset) {
+                    right = Math.max(right, region.bounds.right);
+                }
+            }
+            if (frameData.insetFrame != null) {
+                right = Math.max(right, frameData.insetFrame.right);
+            }
+            return Math.max(0f, right - frameData.viewBoxWidth + 120f);
         }
     }
 

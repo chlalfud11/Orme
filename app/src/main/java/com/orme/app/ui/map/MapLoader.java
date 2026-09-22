@@ -114,6 +114,15 @@ public final class MapLoader {
 
         JSONArray insetViewBox = object.optJSONArray("insetViewBox");
         boolean hasInset = insetViewBox != null && insetViewBox.length() >= 2;
+        JSONArray insetFrame = object.optJSONArray("insetFrame");
+        RectF frame = insetFrame != null && insetFrame.length() >= 4
+                ? new RectF(
+                (float) insetFrame.getDouble(0),
+                (float) insetFrame.getDouble(1),
+                (float) insetFrame.getDouble(2),
+                (float) insetFrame.getDouble(3)
+        )
+                : null;
         return new MapData(
                 (float) viewBox.getDouble(0),
                 (float) viewBox.getDouble(1),
@@ -122,7 +131,8 @@ public final class MapLoader {
                 regions,
                 hasInset ? (float) insetViewBox.getDouble(0) : 0f,
                 hasInset ? (float) insetViewBox.getDouble(1) : 0f,
-                hasInset
+                hasInset,
+                frame
         );
     }
 

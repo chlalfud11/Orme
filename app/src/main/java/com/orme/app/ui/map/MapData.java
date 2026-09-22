@@ -1,5 +1,7 @@
 package com.orme.app.ui.map;
 
+import android.graphics.RectF;
+
 import java.util.List;
 
 /** 한 화면의 지도 데이터. */
@@ -12,6 +14,7 @@ public final class MapData {
     public final float insetViewBoxWidth;
     public final float insetViewBoxHeight;
     public final boolean hasInsetViewBox;
+    public final RectF insetFrame;
 
     public MapData(
             float viewBoxWidth,
@@ -23,6 +26,30 @@ public final class MapData {
             float insetViewBoxHeight,
             boolean hasInsetViewBox
     ) {
+        this(
+                viewBoxWidth,
+                viewBoxHeight,
+                province,
+                provinceCode,
+                regions,
+                insetViewBoxWidth,
+                insetViewBoxHeight,
+                hasInsetViewBox,
+                null
+        );
+    }
+
+    public MapData(
+            float viewBoxWidth,
+            float viewBoxHeight,
+            String province,
+            String provinceCode,
+            List<MapRegion> regions,
+            float insetViewBoxWidth,
+            float insetViewBoxHeight,
+            boolean hasInsetViewBox,
+            RectF insetFrame
+    ) {
         this.viewBoxWidth = viewBoxWidth;
         this.viewBoxHeight = viewBoxHeight;
         this.province = province;
@@ -31,5 +58,6 @@ public final class MapData {
         this.insetViewBoxWidth = insetViewBoxWidth;
         this.insetViewBoxHeight = insetViewBoxHeight;
         this.hasInsetViewBox = hasInsetViewBox;
+        this.insetFrame = insetFrame;
     }
 }

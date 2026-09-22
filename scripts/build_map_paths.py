@@ -12,6 +12,7 @@ import json, math, os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "app/src/main/assets/map")
+SEARCH_ASSETS = os.path.join(ROOT, "app/src/main/assets/search")
 PROV_SRC = "/tmp/kr_prov.json"
 MUNI_SRC = "/tmp/kr_muni.json"
 
@@ -23,6 +24,10 @@ METRO_CODES = {"11", "21", "22", "23", "24", "25", "26"}
 # 줌인(시군구 분할)을 하지 않는 시도: 광역시 7곳 + 세종.
 # 이 지역들은 줌아웃 화면에서 도형을 바로 눌러 사진 한 장을 넣는다(내부 구/동 경계 없음).
 NO_ZOOM_CODES = METRO_CODES | {"29"}
+# 해안·도서가 많은 행정구역은 폴리곤 평균점이 실제 도심에서 크게 벗어날 수 있다.
+CENTER_OVERRIDES = {
+    "35020": (35.967, 126.736),  # 군산시 중심
+}
 
 def project(lon, lat):
     return (lon * KX, -lat)  # y 뒤집기(화면 좌표 위->아래)
@@ -45,6 +50,23 @@ def rings_of(geom):
             rings.append(pts)
         polys.append(rings)
     return polys
+
+
+def geometry_center(geom):
+    """가장 큰 외곽 폴리곤의 정점 평균을 (위도, 경도)로 반환한다."""
+    t = geom["type"]
+    polys = [geom["coordinates"]] if t == "Polygon" else geom["coordinates"]
+    largest = max(polys, key=lambda poly: ring_area(poly[0]))
+    points = largest[0]
+    return (
+        sum(point[1] for point in points) / len(points),
+        sum(point[0] for point in points) / len(points),
+    )
+
+
+def search_image_for(code):
+    """지역별로 중복되지 않는 대표 사진 파일명을 반환한다."""
+    return f"region_{code}.jpg"
 
 def ring_area(pts):
     a = 0.0
@@ -216,6 +238,7 @@ def main():
         p = ft["properties"]
         prov_feats.append({
             "code": p["code"], "name": p["name"], "name_eng": p["name_eng"],
+            "center": geometry_center(ft["geometry"]),
             "polys": rings_of(ft["geometry"]),
         })
 
@@ -252,6 +275,7 @@ def main():
         p = ft["properties"]
         muni_feats.append({
             "code": p["code"], "name": p["name"], "name_eng": p["name_eng"],
+            "center": CENTER_OVERRIDES.get(p["code"], geometry_center(ft["geometry"])),
             "polys": rings_of(ft["geometry"]),
         })
 
@@ -263,6 +287,20 @@ def main():
     # 전국(줌아웃) 프레임에서의 각 시군 위치 인덱스 (모자이크/색농도용)
     index_items = {}
     index_counts = {}
+    catalog_entries = []
+
+    for f in prov_feats:
+        if f["code"] in NO_ZOOM_CODES:
+            latitude, longitude = f["center"]
+            catalog_entries.append({
+                "code": f["code"],
+                "provinceCode": f["code"],
+                "name": f["name"],
+                "name_eng": f["name_eng"],
+                "latitude": round(latitude, 6),
+                "longitude": round(longitude, 6),
+                "image": search_image_for(f["code"]),
+            })
 
     for pc, items in by_prov.items():
         # 광역시/세종: 줌인(시군구 분할) 안 함 → 시군 파일/인덱스 생성 생략.
@@ -291,15 +329,34 @@ def main():
 
         nz_main, vw2, vh2 = make_normalizer(mb, target_w=1000, pad=30)
         inset_vb = None
+        inset_frame = None
         nz_inset = None
         if outlier_list:
             obb = bbox_of([p for i in outlier_list for p in cleaned[i][1]])  # outlier 폴리곤 평탄화
             nz_inset, ivw, ivh = make_normalizer(obb, target_w=300, pad=24)
             inset_vb = [ivw, ivh]
+            inset_scale = (ivw - 48.0) / ((obb[2] - obb[0]) or 1e-9)
+            inset_pad = 24.0 / inset_scale
+            inset_frame = [
+                round(nz_main(obb[0] - inset_pad, obb[1] - inset_pad)[0], 1),
+                round(nz_main(obb[0] - inset_pad, obb[1] - inset_pad)[1], 1),
+                round(nz_main(obb[2] + inset_pad, obb[3] + inset_pad)[0], 1),
+                round(nz_main(obb[2] + inset_pad, obb[3] + inset_pad)[1], 1),
+            ]
 
         regs = []
         index_counts[pc] = len(cleaned)
         for i, (m, kept, bx) in enumerate(cleaned):
+            latitude, longitude = m["center"]
+            catalog_entries.append({
+                "code": m["code"],
+                "provinceCode": pc,
+                "name": m["name"],
+                "name_eng": m["name_eng"],
+                "latitude": round(latitude, 6),
+                "longitude": round(longitude, 6),
+                "image": search_image_for(m["code"]),
+            })
             is_out = i in outlier_set
             nz_use = nz_inset if is_out else nz_main
             # 줌인은 실제 가장자리 유지: 약한 단순화, 스무딩 없음
@@ -321,6 +378,7 @@ def main():
                "provinceCode": pc, "regions": regs}
         if inset_vb:
             out["insetViewBox"] = inset_vb
+            out["insetFrame"] = inset_frame
         json.dump(out, open(os.path.join(ASSETS, "sigungu", f"{pc}.json"), "w"),
                   ensure_ascii=False, separators=(",", ":"))
         ins = f" inset={len(outlier_list)}" if outlier_list else ""
@@ -331,6 +389,12 @@ def main():
               open(os.path.join(ASSETS, "sigungu_index.json"), "w"),
               ensure_ascii=False, separators=(",", ":"))
     print(f"sigungu_index.json  items={len(index_items)}  provinces={len(index_counts)}")
+
+    catalog_entries.sort(key=lambda entry: entry["code"])
+    os.makedirs(SEARCH_ASSETS, exist_ok=True)
+    json.dump(catalog_entries, open(os.path.join(SEARCH_ASSETS, "regions.json"), "w"),
+              ensure_ascii=False, separators=(",", ":"))
+    print(f"search/regions.json  entries={len(catalog_entries)}")
 
 if __name__ == "__main__":
     main()
