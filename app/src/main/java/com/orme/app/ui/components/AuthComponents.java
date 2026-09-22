@@ -6,7 +6,9 @@ import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -17,7 +19,24 @@ import com.orme.app.ui.theme.AppColors;
 
 /** 로그인/회원가입에 공통으로 쓰는 View 구성 요소. */
 public final class AuthComponents {
+    public static final int BOTTOM_BAR_HEIGHT_DP = 84;
+    public static final int BOTTOM_BAR_LIFT_DP = 8;
+
     private AuthComponents() {
+    }
+
+    public static int bottomContentInset(Context context) {
+        return ViewUtils.dp(context, BOTTOM_BAR_HEIGHT_DP + BOTTOM_BAR_LIFT_DP);
+    }
+
+    public static FrameLayout.LayoutParams bottomBarParams(Context context) {
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewUtils.dp(context, BOTTOM_BAR_HEIGHT_DP),
+                Gravity.BOTTOM
+        );
+        params.bottomMargin = ViewUtils.dp(context, BOTTOM_BAR_LIFT_DP);
+        return params;
     }
 
     public static LinearLayout underlineField(
@@ -60,6 +79,7 @@ public final class AuthComponents {
         if (password) {
             input.setTransformationMethod(PasswordTransformationMethod.getInstance());
         }
+        ViewUtils.enableKoreanInput(input);
         row.addView(input, ViewUtils.weight(1f));
 
         View underline = new View(context);
@@ -122,7 +142,7 @@ public final class AuthComponents {
         row.setPadding(ViewUtils.dp(context, 28), 0, ViewUtils.dp(context, 28), 0);
         column.addView(row, ViewUtils.linear(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                ViewUtils.dp(context, 83)
+                ViewUtils.dp(context, BOTTOM_BAR_HEIGHT_DP - 1)
         ));
 
         addNavIcon(context, row, R.drawable.ic_nav_map, "지도", v -> navigator.showMap(), 30, colors.primary);
@@ -157,7 +177,7 @@ public final class AuthComponents {
         icon.setPadding(0, 0, 0, 0);
         icon.setOnClickListener(listener);
         LinearLayout.LayoutParams params = ViewUtils.linear(ViewUtils.dp(context, sizeDp),
-                ViewUtils.dp(context, 83));
+                ViewUtils.dp(context, BOTTOM_BAR_HEIGHT_DP - 1));
         row.addView(icon, params);
     }
 }

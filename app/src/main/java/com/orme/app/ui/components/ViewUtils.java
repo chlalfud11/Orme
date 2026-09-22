@@ -5,10 +5,14 @@ import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.GradientDrawable;
+import android.os.LocaleList;
+import android.util.LruCache;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -18,6 +22,19 @@ import java.io.InputStream;
 
 /** Compose의 dp 기반 레이아웃 수치를 View에서도 동일하게 적용하는 작은 도우미. */
 public final class ViewUtils {
+    public static final int BACK_BUTTON_SIZE_DP = 34;
+    public static final int BACK_BUTTON_LEFT_DP = 20;
+    public static final int BACK_BUTTON_TOP_DP = 64;
+
+    private static final LruCache<String, Bitmap> ASSET_BITMAPS = new LruCache<String, Bitmap>(
+            8 * 1024
+    ) {
+        @Override
+        protected int sizeOf(String key, Bitmap bitmap) {
+            return Math.max(1, bitmap.getByteCount() / 1024);
+        }
+    };
+
     private ViewUtils() {
     }
 
@@ -27,6 +44,12 @@ public final class ViewUtils {
 
     public static int sp(Context context, float value) {
         return Math.round(value * context.getResources().getDisplayMetrics().scaledDensity);
+    }
+
+    public static void enableKoreanInput(EditText input) {
+        LocaleList korean = new LocaleList(java.util.Locale.KOREA);
+        input.setTextLocales(korean);
+        input.setImeHintLocales(korean);
     }
 
     public static FrameLayout.LayoutParams frame(int width, int height) {
@@ -119,6 +142,34 @@ public final class ViewUtils {
         view.setElevation(0f);
     }
 
+    public static ImageButton backButton(
+            Context context,
+            int drawable,
+            int tint,
+            View.OnClickListener listener
+    ) {
+        ImageButton button = new ImageButton(context);
+        button.setImageResource(drawable);
+        button.setColorFilter(tint);
+        button.setBackgroundColor(Color.TRANSPARENT);
+        button.setPadding(0, 0, 0, 0);
+        button.setScaleType(ImageButton.ScaleType.FIT_CENTER);
+        button.setContentDescription("뒤로");
+        button.setOnClickListener(listener);
+        return button;
+    }
+
+    public static FrameLayout.LayoutParams backButtonParams(Context context) {
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                dp(context, BACK_BUTTON_SIZE_DP),
+                dp(context, BACK_BUTTON_SIZE_DP),
+                Gravity.TOP | Gravity.LEFT
+        );
+        params.leftMargin = dp(context, BACK_BUTTON_LEFT_DP);
+        params.topMargin = dp(context, BACK_BUTTON_TOP_DP);
+        return params;
+    }
+
     public static void addGap(LinearLayout parent, Context context, int widthDp, boolean vertical) {
         View gap = new View(context);
         parent.addView(gap, vertical
@@ -127,8 +178,17 @@ public final class ViewUtils {
     }
 
     public static Bitmap assetBitmap(Context context, String name) {
-        try (InputStream input = context.getAssets().open("search/" + name + ".jpg")) {
-            return BitmapFactory.decodeStream(input);
+        String assetName = name.endsWith(".jpg") ? name : name + ".jpg";
+        Bitmap cached = ASSET_BITMAPS.get(assetName);
+        if (cached != null) {
+            return cached;
+        }
+        try (InputStream input = context.getAssets().open("search/" + assetName)) {
+            Bitmap bitmap = BitmapFactory.decodeStream(input);
+            if (bitmap != null) {
+                ASSET_BITMAPS.put(assetName, bitmap);
+            }
+            return bitmap;
         } catch (Exception ignored) {
             return null;
         }
