@@ -72,7 +72,7 @@ public final class SignupScreen extends FrameLayout {
 
         TextView title = ViewUtils.playfair(context, "Signup", colors.primary, 56, Gravity.LEFT);
         title.setIncludeFontPadding(false);
-        title.setTextScaleX(1.34f);
+        title.setTextScaleX(1.50f);
         title.setTypeface(AppTypography.playfair(context), Typeface.BOLD);
         title.setTranslationX(-ViewUtils.dp(context, 5));
         title.setTranslationY(ViewUtils.dp(context, 1));
