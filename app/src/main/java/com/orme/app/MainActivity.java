@@ -1,6 +1,7 @@
 package com.orme.app;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.widget.FrameLayout;
 
@@ -38,6 +39,18 @@ public final class MainActivity extends ComponentActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (navigator != null && requestCode == AppNavigator.IMAGE_REQUEST) {
             navigator.onImageResult(resultCode, data);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode,
+            String[] permissions,
+            int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (navigator != null) {
+            navigator.onLocationPermissionResult(requestCode, grantResults);
         }
     }
 

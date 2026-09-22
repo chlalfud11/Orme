@@ -82,6 +82,12 @@ public final class AppNavigator {
         }
     }
 
+    public void onLocationPermissionResult(int requestCode, int[] grantResults) {
+        if (currentView instanceof TravelSearchScreen) {
+            ((TravelSearchScreen) currentView).onLocationPermissionResult(requestCode, grantResults);
+        }
+    }
+
     public void showSplash() {
         show(new SplashScreen(activity, this));
     }
